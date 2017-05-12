@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -eo pipefail; [[ $DOKKU_TRACE ]] && set -x
+
+APP="$1"
+IMAGE="$2"
+HOSTNAME=$(hostname -f)
+
+if [[ -f "$DOKKU_ROOT/$APP/MATTERMOST_URL" || -f "$DOKKU_ROOT/MATTERMOST_URL" ]]; then
+  echo "-----> Notifying Mattermost ..."
+  URL=$(dokku url $APP)
+  MATTERMOST_URL=$(cat "$DOKKU_ROOT/$APP/MATTERMOST_URL" 2> /dev/null || cat "$DOKKU_ROOT/MATTERMOST_URL" 2> /dev/null)
+  MATTERMOST_JSON="{ \
+      \"username\": \"Dokku\", \
+      \"icon_url\": \"https://pbs.twimg.com/profile_images/732274010566746112/iuWAJwD8_normal.jpg\", \
+      \"attachments\": [{ \
+        \"text\": \"<!channel> El proyecto $APP ha sido desplegado en $URL\", \
+        \"color\": \"good\", \
+        \"mrkdwn_in\": [\"text\"] \
+      }] \
+  }"
+  MATTERMOST_RESULT=$(curl -s -d "payload=$MATTERMOST_JSON" "${MATTERMOST_URL}" -w "%{http_code}")
+  echo "       ${MATTERMOST_RESULT}"
+fi
